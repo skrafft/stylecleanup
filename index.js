@@ -3,6 +3,7 @@
 const glob = require('glob')
 const path = require('path')
 const os = require('os')
+const argv = require('yargs').argv
 
 const processFile = require('./processFile')
 
@@ -13,18 +14,21 @@ function resolveHome(filepath) {
     return filepath
 }
 
-let [_, __, cmd, ...files] = process.argv
+let [cmd, ...files] = argv._
+const globStyleFile = argv.g;
+const ignoreMissing = argv.i ? (Array.isArray(argv.i) ? argv.i : [argv.i]) : null;
 
 const cmds = ['check', 'fix', 'fix-force']
 
-if (process.argv.length === 2) {
+if (argv._.length === 0) {
   cmd = 'check'
+  globStyleFile = null
   files = ['./**/*.js']
 }
 
 if (!cmd || !files.length || cmd === 'help' || cmds.indexOf(cmd) === -1) {
   console.log(`\
-Usage: stylecleanup [command] some/file/to/check.js
+Usage: stylecleanup [command] [options] some/file/to/check.js
   command: one of 'check', 'fix', 'fix-force'
   globs are also supported, e.g.
 
@@ -51,7 +55,7 @@ const allfiles = files.map(
 
 console.log(`Checking ${allfiles.length} files matching ${files.join(' ')}`)
 
-const results = allfiles.map(file => processFile(file, cmd))
+const results = allfiles.map(file => processFile(file, cmd, globStyleFile, ignoreMissing))
 const removed = results.map(r => r.removed).reduce(add, 0)
 
 if (cmd !== 'check') {

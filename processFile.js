@@ -26,7 +26,10 @@ const showCode = (code, loc) => {
   console.log(code.slice(0, loc.start.column) + chalk.red(code.slice(loc.start.column, loc.end.column)) + code.slice(loc.end.column))
 }
 
-const showMissing = ({key, loc, code}) => {
+const showMissing = (ignoreMissing) => ({key, loc, code}) => {
+  if (ignoreMissing.find(u => key.indexOf(u) !== -1)) {
+    return;
+  }
   console.log(`Missing style '${key}' at ${pos(loc)}`)
   showCode(code, loc)
 }
@@ -36,14 +39,14 @@ const showUnused = ({key, loc, code}) => {
   showCode(code, loc)
 }
 
-const showSheet = ({warnings, missing, unused}) => {
+const showSheet = (ignoreMissing) => ({warnings, missing, unused}) => {
   if (warnings.length) {
     console.log(chalk.bold.red('⚠️  Warnings ⚠️'))
     warnings.forEach(showWarning)
   }
   if (missing.length) {
     console.log(chalk.bold.red('🔍  Missing styles 🔍'))
-    missing.forEach(showMissing)
+    missing.forEach(showMissing(ignoreMissing))
   }
   if (unused.length) {
     console.log(chalk.bold.red('🤔  Unused styles 🤔'))
@@ -51,8 +54,8 @@ const showSheet = ({warnings, missing, unused}) => {
   }
 }
 
-const processFile = (file, cmd) => {
-  const {sheets, lines} = analyzeFile(file)
+const processFile = (file, cmd, globStyleFile, ignoreMissing) => {
+  const {sheets, lines} = analyzeFile(file, globStyleFile)
 
   if (!sheets.length) {
     return {removed: 0, skipped: []}
@@ -61,7 +64,7 @@ const processFile = (file, cmd) => {
   if (cmd === 'check') {
     if (sheets.some(sheet => sheet.missing.length || sheet.unused.length)) {
       console.log(chalk.bold.blue('File: ' + file))
-      sheets.forEach(showSheet)
+      sheets.forEach(showSheet(ignoreMissing))
     }
     return {removed: 0, skipped: []}
   } else {
